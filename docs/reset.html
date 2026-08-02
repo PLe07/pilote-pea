@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Réparation — Pilote PEA</title>
+<style>
+  :root{--bg:#0d1117;--panel:#161d27;--line:#26313f;--txt:#e6edf3;--txt2:#9fb0c3;
+        --txt3:#6b7d92;--acc:#4f9cf9;--up:#2ecc8f;--down:#ff5d6c;--warn:#f7b955;
+        --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+       -webkit-font-smoothing:antialiased;padding:34px 20px 70px}
+  .w{max-width:660px;margin:0 auto}
+  h1{font-size:23px;font-weight:650;letter-spacing:-.4px;margin-bottom:6px}
+  .sub{color:var(--txt2);font-size:14px;margin-bottom:26px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:18px 20px;margin-bottom:14px}
+  h2{font-size:14px;font-weight:600;margin-bottom:10px}
+  .row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .row:last-child{border-bottom:none}
+  .row i{font-style:normal;flex-shrink:0;width:16px}
+  .ok{color:var(--up)}.ko{color:var(--down)}.wa{color:var(--warn)}.mu{color:var(--txt3)}
+  code{font:12px var(--mono);color:var(--acc);background:#0d1117;border:1px solid var(--line);
+       border-radius:4px;padding:1px 6px}
+  .btn{display:inline-block;background:var(--acc);color:#04101f;border:none;border-radius:9px;
+       padding:13px 22px;font:600 14px inherit;cursor:pointer;text-decoration:none;margin-top:6px}
+  .btn.ghost{background:transparent;color:var(--txt2);border:1px solid var(--line)}
+  .log{font:12px/1.75 var(--mono);color:var(--txt2);white-space:pre-wrap;word-break:break-word}
+  .big{font:600 15px inherit;margin:16px 0 8px}
+</style>
+</head>
+<body><div class="w">
+  <h1>Réparation</h1>
+  <div class="sub">Un ancien service worker installé par une autre application du même domaine
+  peut intercepter les fichiers de Pilote PEA et empêcher son chargement. Cette page fait le ménage.</div>
+
+  <div class="card">
+    <h2>État actuel</h2>
+    <div id="etat" class="log">analyse en cours…</div>
+  </div>
+
+  <div class="card">
+    <h2>Nettoyer</h2>
+    <p style="font-size:13.5px;color:var(--txt2);margin-bottom:12px">
+      Désinscrit tous les service workers de ce domaine et vide tous les caches.
+      Aucune de tes données personnelles n'est touchée : montants, profil et convictions
+      vivent dans le stockage local, pas dans les caches.</p>
+    <button class="btn" id="go">Tout nettoyer et recharger l'app</button>
+    <a class="btn ghost" href="./index.html">Retour à l'app</a>
+    <div id="res" class="log" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Si ça ne suffit pas</h2>
+    <div class="big">1. Le test qui tranche en dix secondes</div>
+    <p style="font-size:13.5px;color:var(--txt2)">Ouvre l'app dans une fenêtre privée
+    (<code>Cmd</code>+<code>Maj</code>+<code>N</code> sur Safari). Les service workers n'y tournent pas.
+    Si l'app s'affiche correctement en privé, le coupable était bien un service worker — et cette
+    page l'a réglé pour la navigation normale.</p>
+    <div class="big">2. Vider le cache de Safari</div>
+    <p style="font-size:13.5px;color:var(--txt2)">Menu <b>Développement</b> → <b>Vider les caches</b>,
+    puis <code>Cmd</code>+<code>R</code>. Si le menu Développement est absent :
+    Réglages → Avancées → « Afficher les fonctionnalités pour développeurs web ».</p>
+    <div class="big">3. Vérifier que les fichiers sont bien en ligne</div>
+    <p style="font-size:13.5px;color:var(--txt2)">Ouvre directement
+    <a href="./styles.css" style="color:var(--acc)">styles.css</a> et
+    <a href="./app.js" style="color:var(--acc)">app.js</a>.
+    Si l'une des deux affiche une page « 404 », le dossier n'a pas été poussé en entier :
+    relance <code>Installer.command</code>.</p>
+  </div>
+</div>
+
+<script>
+const E = document.getElementById("etat");
+const R = document.getElementById("res");
+const li = (c, t) => `<span class="${c}">${c === "ok" ? "✓" : c === "ko" ? "✗" : "•"}</span> ${t}\n`;
+
+async function etat() {
+  let out = "";
+  out += li("mu", "origine : " + location.origin);
+  out += li("mu", "chemin  : " + location.pathname.replace(/reset\.html$/, ""));
+
+  if ("serviceWorker" in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    if (!regs.length) out += li("ok", "aucun service worker enregistré");
+    else regs.forEach(r => {
+      const s = r.scope.replace(location.origin, "");
+      const mien = s.includes("pilote-pea");
+      out += li(mien ? "ok" : "ko",
+        `service worker sur « ${s} »` + (mien ? " (celui de l'app)" : " — ÉTRANGER, il intercepte l'app"));
+    });
+  } else out += li("mu", "service workers non gérés par ce navigateur");
+
+  if ("caches" in window) {
+    const ks = await caches.keys();
+    out += ks.length ? ks.map(k => li("mu", "cache : " + k)).join("") : li("ok", "aucun cache");
+  }
+
+  // les trois fichiers vitaux répondent-ils ?
+  for (const f of ["styles.css", "app.js", "data/latest.json"]) {
+    try {
+      const r = await fetch("./" + f + "?t=" + Date.now(), { cache: "no-store" });
+      const ct = r.headers.get("content-type") || "";
+      out += li(r.ok ? "ok" : "ko", `${f} → HTTP ${r.status}${r.ok ? "  (" + ct.split(";")[0] + ")" : ""}`);
+    } catch (e) { out += li("ko", `${f} → injoignable (${e.message})`); }
+  }
+  E.innerHTML = out;
+}
+
+document.getElementById("go").onclick = async () => {
+  R.innerHTML = "";
+  let n = 0;
+  if ("serviceWorker" in navigator) {
+    for (const r of await navigator.serviceWorker.getRegistrations()) {
+      const s = r.scope.replace(location.origin, "");
+      await r.unregister(); n++;
+      R.innerHTML += li("ok", "désinscrit : " + s);
+    }
+  }
+  if ("caches" in window) {
+    for (const k of await caches.keys()) { await caches.delete(k); n++; R.innerHTML += li("ok", "cache vidé : " + k); }
+  }
+  R.innerHTML += li("ok", n ? n + " élément(s) supprimé(s)" : "rien à supprimer");
+  R.innerHTML += li("mu", "rechargement dans 2 secondes…");
+  setTimeout(() => location.replace("./index.html?frais=" + Date.now()), 2000);
+};
+
+etat();
+</script>
+</body></html>

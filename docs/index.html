@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pilote PEA</title>
+<meta name="description" content="Allocation PEA diversifiée multi-ETF, données de marché et actualités rafraîchies chaque jour.">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pilote PEA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="hd">
+    <h1>Pilote <span>PEA</span></h1>
+    <div class="live" id="live"><i class="pulse"></i><span id="liveTxt">chargement…</span></div>
+  </div>
+  <nav id="nav">
+    <button class="on" data-t="jour">Aujourd'hui</button>
+    <button data-t="marche">Marché</button>
+    <button data-t="portef">Portefeuille</button>
+    <button data-t="alloc">Allocation</button>
+    <button data-t="pourquoi">Pourquoi ces ETF</button>
+    <button data-t="rebal">Rééquilibrage</button>
+    <button data-t="convict">Convictions</button>
+    <button data-t="systeme">Système</button>
+  </nav>
+</header>
+
+<!-- ═══ AUJOURD'HUI ═══ -->
+<section id="jour" class="on">
+  <div id="briefBox"><div class="card"><div class="skel" style="width:60%"></div>
+    <div class="skel" style="width:90%;margin-top:9px"></div>
+    <div class="skel" style="width:80%;margin-top:9px"></div></div></div>
+  <h3>Ce que disent les données aujourd'hui</h3>
+  <div id="signals"></div>
+  <h3>Actualités qui touchent ton portefeuille</h3>
+  <div class="seg" id="newsFilter"></div>
+  <div class="card" id="newsBox"></div>
+  <div id="calBox"></div>
+</section>
+
+<!-- ═══ MARCHÉ ═══ -->
+<section id="marche">
+  <h2>Marché</h2>
+  <div class="lead">Cotations collectées automatiquement chaque matin. Les taux se lisent en points, le reste en pourcentage.</div>
+  <div class="grid g4" id="mktKpis" style="margin-bottom:20px"></div>
+  <div class="card" style="padding:0;overflow-x:auto"><table id="tblIdx"></table></div>
+  <h3>Taux, change et matières premières</h3>
+  <div class="card" style="padding:0;overflow-x:auto"><table id="tblRates"></table></div>
+  <h3>Macro</h3>
+  <div class="grid g2" id="macroBox"></div>
+</section>
+
+<!-- ═══ PORTEFEUILLE ═══ -->
+<section id="portef">
+  <h2>Portefeuille</h2>
+  <div class="lead">Tes lignes valorisées au dernier cours connu. Les montants restent sur cet appareil : rien n'est envoyé nulle part.</div>
+  <div class="grid g4" id="pfKpis" style="margin-bottom:18px"></div>
+  <div class="card" style="padding:0;overflow-x:auto"><table id="tblPf"></table></div>
+  <div class="note" id="pfNote"></div>
+  <h3>Cotation des ETF suivis</h3>
+  <div class="card" style="padding:0;overflow-x:auto"><table id="tblEtf"></table></div>
+</section>
+
+<!-- ═══ ALLOCATION ═══ -->
+<section id="alloc">
+  <h2>Allocation cible</h2>
+  <div class="lead">Les curseurs recalculent tout : répartition, exposition réelle par zone, volatilité attendue et projection.</div>
+  <div class="grid g2">
+    <div class="card">
+      <h3 style="margin-top:0">Cadre</h3>
+      <div class="ctl"><label>Horizon <b><span id="vHor">15</span> ans</b></label><input type="range" id="hor" min="2" max="30" value="15"></div>
+      <div class="ctl"><label>Baisse temporaire acceptée <b>−<span id="vDd">36</span> %</b></label><input type="range" id="dd" min="8" max="55" value="36"></div>
+      <div class="ctl"><label>Capital de départ <b id="vCap">10 000 €</b></label><input type="range" id="cap" min="0" max="150000" step="500" value="10000"></div>
+      <div class="ctl" style="margin-bottom:0"><label>Versement mensuel <b id="vMens">400 €</b></label><input type="range" id="mens" min="0" max="3000" step="25" value="400"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Où loger la poche défensive ?</h3>
+      <div class="seg" id="segMode">
+        <button class="on" data-m="global">PEA + défensif externe</button>
+        <button data-m="pea">Tout dans le PEA</button>
+      </div>
+      <div id="modeExpl" style="font-size:13px;color:var(--txt2)"></div>
+      <h3>Poches satellites (% de la partie actions)</h3>
+      <div class="ctl"><label>Europe <b><span id="vEu">18</span> %</b></label><input type="range" id="sEu" min="0" max="35" value="18"></div>
+      <div class="ctl"><label>Émergents <b><span id="vEm">12</span> %</b></label><input type="range" id="sEm" min="0" max="25" value="12"></div>
+      <div class="ctl"><label>Small caps US <b><span id="vSm">6</span> %</b></label><input type="range" id="sSm" min="0" max="15" value="6"></div>
+      <div class="ctl" style="margin-bottom:0"><label>Nasdaq-100 <b><span id="vNq">6</span> %</b></label><input type="range" id="sNq" min="0" max="20" value="6"></div>
+      <div class="note" id="satWarn"></div>
+    </div>
+  </div>
+  <div class="grid g4" id="allocKpis" style="margin:18px 0"></div>
+  <div class="stack" id="stack"></div>
+  <div class="legend" id="legend"></div>
+  <h3>Exposition réelle, par transparence</h3>
+  <div class="card"><table id="tblLook"></table></div>
+  <h3>Projection</h3>
+  <div class="card"><div id="chart"></div>
+    <div class="legend" style="margin-top:12px">
+      <span><i class="dot" style="background:var(--up)"></i>Favorable</span>
+      <span><i class="dot" style="background:var(--acc)"></i>Central</span>
+      <span><i class="dot" style="background:var(--down)"></i>Défavorable</span>
+      <span><i class="dot" style="background:var(--txt3)"></i>Total versé</span>
+    </div></div>
+  <div class="grid g2">
+    <div class="card"><h3 style="margin-top:0">Hypothèses</h3><table id="tblHyp"></table>
+      <div class="note">Rendements nominaux long terme nets de frais. Ordres de grandeur historiques, pas des prévisions.</div></div>
+    <div class="card"><h3 style="margin-top:0">Ce que la fiscalité prend au bout</h3><div id="fisc"></div></div>
+  </div>
+  <h3>Le test qui compte</h3>
+  <div class="card" id="stress"></div>
+</section>
+
+<!-- ═══ POURQUOI ═══ -->
+<section id="pourquoi">
+  <h2>Pourquoi ceux-là et pas les autres</h2>
+  <div class="lead">Sur chaque brique plusieurs ETF PEA se valent en apparence. Voici les duels et le critère qui tranche.</div>
+  <div class="card"><h3 style="margin-top:0">Les cinq critères, dans l'ordre</h3><table id="tblCrit"></table></div>
+  <div id="duels"></div>
+  <h3>Ce qu'on ne peut pas faire dans un PEA</h3>
+  <div class="card"><table id="tblLimits"></table></div>
+  <h3>Le risque qu'on accepte : la réplication synthétique</h3>
+  <div class="card" id="swapBox"></div>
+</section>
+
+<!-- ═══ REBALANCE ═══ -->
+<section id="rebal">
+  <h2>Rééquilibrage</h2>
+  <div class="lead">Saisis le nombre de parts ou le montant de chaque ligne. L'app valorise au cours du jour, calcule la dérive et oriente les prochains versements plutôt que de te faire vendre.</div>
+  <div class="seg" id="segSaisie">
+    <button class="on" data-s="montant">Saisir des montants</button>
+    <button data-s="parts">Saisir des parts</button>
+  </div>
+  <div class="card" style="padding:0;overflow-x:auto"><table id="tblRebal"></table></div>
+  <div id="rebalOut"></div>
+</section>
+
+<!-- ═══ CONVICTIONS ═══ -->
+<section id="convict">
+  <h2>Journal de convictions</h2>
+  <div class="lead">Une conviction sans condition d'invalidation est une superstition. Écris-la, dimensionne-la, et fixe d'avance ce qui te ferait dire que tu avais tort.</div>
+  <div class="card"><div class="grid g2">
+    <div>
+      <div class="ctl"><label>Ta conviction</label><input type="text" id="cvT" placeholder="ex. l'infrastructure de l'IA reste sous-estimée sur 5 ans"></div>
+      <div class="ctl"><label>Ce qui te ferait dire que tu as tort</label><input type="text" id="cvI" placeholder="ex. deux trimestres consécutifs de baisse du capex des hyperscalers"></div>
+    </div>
+    <div>
+      <div class="ctl"><label>Brique correspondante</label><select id="cvB"></select></div>
+      <div class="ctl"><label>Taille visée <b><span id="cvV">5</span> %</b></label><input type="range" id="cvS" min="1" max="20" value="5"></div>
+      <button class="btn" id="cvAdd">Enregistrer</button>
+    </div>
+  </div></div>
+  <div id="cvList"></div>
+  <h3>Le garde-fou</h3>
+  <div class="card" id="cvGuard"></div>
+</section>
+
+<!-- ═══ SYSTÈME ═══ -->
+<section id="systeme">
+  <h2>Système</h2>
+  <div class="lead">L'app se met à jour toute seule chaque matin via GitHub Actions. Voici ce qui a répondu et ce qui n'a pas répondu.</div>
+  <div class="grid g4" id="sysKpis" style="margin-bottom:18px"></div>
+  <div class="card"><h3 style="margin-top:0">Santé des sources</h3><table id="tblHealth"></table></div>
+  <div class="card"><h3 style="margin-top:0">Flux d'actualités interrogés</h3><table id="tblFeeds"></table></div>
+  <h3>Règles de conduite</h3>
+  <div class="card"><table id="tblRules"></table></div>
+  <h3>Le PEA en sept chiffres</h3>
+  <div class="card"><table id="tblPea"></table></div>
+  <div class="card"><h3 style="margin-top:0">Données locales</h3>
+    <p style="font-size:13px;color:var(--txt2)">Tes montants, ton profil et tes convictions ne quittent jamais cet appareil : ils sont dans le stockage local du navigateur, jamais dans le dépôt ni sur un serveur.</p>
+    <div style="display:flex;gap:9px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn ghost" id="btnExport">Exporter mes données</button>
+      <button class="btn ghost" id="btnReset">Tout effacer</button>
+      <button class="btn ghost" id="btnReload">Forcer la mise à jour</button>
+    </div></div>
+  <div class="disc">
+    <b>Ce que cet outil n'est pas.</b> Ce n'est pas un conseil en investissement personnalisé, et son auteur n'est pas conseiller financier.
+    Les données proviennent de sources publiques automatisées et peuvent être erronées, retardées ou manquantes : vérifie toujours le DIC
+    de chaque ETF et les informations de ton courtier avant de passer un ordre. Les projections reposent sur des hypothèses de rendement
+    moyen et ne garantissent rien. Un portefeuille actions peut perdre plus de la moitié de sa valeur et mettre dix ans à s'en remettre.
+    N'investis que de l'argent dont tu n'as pas besoin sur ton horizon.
+  </div>
+</section>
+
+<footer>
+  Pilote PEA — mise à jour automatique quotidienne. <span id="footMeta"></span>
+  <a href="reset.html" style="margin-left:8px">Réparer l'app</a>
+</footer>
+</div>
+
+<div class="tabbar"><div>
+  <button class="on" data-t="jour"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>Jour</button>
+  <button data-t="marche"><svg viewBox="0 0 24 24"><path d="M4 19V9M9 19V5M14 19v-7M19 19v-4"/></svg>Marché</button>
+  <button data-t="portef"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Poche</button>
+  <button data-t="alloc"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4"/></svg>Cible</button>
+  <button data-t="rebal"><svg viewBox="0 0 24 24"><path d="M3 8h13l-3-3M21 16H8l3 3"/></svg>Ajuster</button>
+  <button data-t="systeme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>Système</button>
+</div></div>
+
+<script src="app.js"></script>
+</body>
+</html>

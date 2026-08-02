@@ -1,0 +1,77 @@
+name: Collecte quotidienne
+
+on:
+  schedule:
+    # 05:40 UTC = 07:40 à Paris en été, 06:40 en hiver.
+    # Les marchés européens ouvrent à 09:00 : les clôtures de la veille sont disponibles.
+    - cron: "40 5 * * 1-6"
+  workflow_dispatch:          # bouton « Run workflow » dans l'onglet Actions
+  push:
+    branches: [main]
+    paths: ["scripts/**", ".github/workflows/daily.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collecte
+  cancel-in-progress: false
+
+jobs:
+  collecte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Collecter les données de marché
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+        run: node scripts/fetch.mjs
+
+      - name: Analyser et produire le tableau de bord
+        run: node scripts/analyze.mjs
+
+      - name: Contrôler la qualité du résultat
+        run: node scripts/verify.mjs
+
+      - name: Publier les données
+        run: |
+          git config user.name  "pilote-pea-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data
+          if git diff --cached --quiet; then
+            echo "Aucun changement de données."
+          else
+            git commit -m "données du $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Résumé
+        if: always()
+        run: |
+          if [ -f docs/data/latest.json ]; then
+            node -e '
+              const j=require("./docs/data/latest.json");
+              const ok=j.health.filter(h=>h.ok);
+              const ko=j.health.filter(h=>!h.ok);
+              const L=[];
+              L.push("## Collecte du "+j.asOf);
+              L.push("");
+              L.push("**Régime :** "+j.regime.label+"  ");
+              L.push("**Couverture :** "+j.quality+" % — "+ok.length+"/"+j.health.length+" sources  ");
+              L.push("**Signaux :** "+j.signals.length+" · **Actualités :** "+(j.news.top||[]).length);
+              L.push("");
+              L.push("| Source | État | Points |");
+              L.push("|---|---|---|");
+              j.health.forEach(h=>L.push("| "+h.name+" | "+(h.ok?"✅":"⚠️ "+(h.error||"").slice(0,60))+" | "+h.points+" |"));
+              if(ko.length) L.push("\n> Les sources en échec sont ignorées : les données de la veille sont conservées pour les instruments concernés.");
+              require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, L.join("\n"));
+            '
+          fi
